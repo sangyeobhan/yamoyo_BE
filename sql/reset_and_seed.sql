@@ -1,7 +1,7 @@
 -- Meeting list performance fixture
 -- Run this only after Flyway migrations have created the current schema.
 --
--- Assumption: 10만 유저 서비스 (전체 대학생 230만의 약 4.3%)
+-- Assumption: 20만 유저 서비스 (전체 대학생 230만의 약 8.7%)
 --
 -- Deterministic fixture values for k6:
 --   TARGET_YEAR=2026
@@ -9,16 +9,16 @@
 --   Token pool: roomId 1~N, userId = (roomId * 2) - 1 (leader)
 --
 -- Seed shape:
---   users                  100,000
---   team_rooms              50,000
---   team_members           200,000
---   timepicks               50,000
---   timepick_participants  200,000
---   meeting_series          50,000
---   meetings               750,000
---   meeting_participants 3,000,000
+--   users                  200,000
+--   team_rooms             100,000
+--   team_members           400,000
+--   timepicks              100,000
+--   timepick_participants  400,000
+--   meeting_series         100,000
+--   meetings             1,500,000
+--   meeting_participants 6,000,000
 
-SET SESSION cte_max_recursion_depth = 100000;
+SET SESSION cte_max_recursion_depth = 200000;
 SET FOREIGN_KEY_CHECKS = 0;
 
 TRUNCATE TABLE banned_team_members;
@@ -62,7 +62,7 @@ WITH RECURSIVE seq AS (
     UNION ALL
     SELECT n + 1
     FROM seq
-    WHERE n < 100000
+    WHERE n < 200000
 )
 SELECT n
 FROM seq;
@@ -74,7 +74,7 @@ CREATE TABLE tmp_rooms (
 INSERT INTO tmp_rooms (room_id)
 SELECT n
 FROM tmp_numbers
-WHERE n <= 50000;
+WHERE n <= 100000;
 
 CREATE TABLE tmp_weeks (
     week_offset INT NOT NULL PRIMARY KEY
@@ -99,10 +99,10 @@ UNION ALL
 SELECT room_id, 2, room_id * 2, 'MEMBER'
 FROM tmp_rooms
 UNION ALL
-SELECT room_id, 3, (IF(room_id = 50000, 1, room_id + 1) * 2) - 1, 'MEMBER'
+SELECT room_id, 3, (IF(room_id = 100000, 1, room_id + 1) * 2) - 1, 'MEMBER'
 FROM tmp_rooms
 UNION ALL
-SELECT room_id, 4, IF(room_id = 50000, 1, room_id + 1) * 2, 'MEMBER'
+SELECT room_id, 4, IF(room_id = 100000, 1, room_id + 1) * 2, 'MEMBER'
 FROM tmp_rooms;
 
 INSERT INTO terms (
@@ -460,8 +460,8 @@ DROP TABLE IF EXISTS tmp_rooms;
 DROP TABLE IF EXISTS tmp_numbers;
 
 -- Expected quick sanity checks after the seed:
---   SELECT COUNT(*) FROM users;                 -- 100000
---   SELECT COUNT(*) FROM team_rooms;            -- 50000
---   SELECT COUNT(*) FROM meetings;              -- 750000
---   SELECT COUNT(*) FROM meeting_participants;  -- 3000000
---   SELECT COUNT(*) FROM team_members;          -- 200000
+--   SELECT COUNT(*) FROM users;                 -- 200000
+--   SELECT COUNT(*) FROM team_rooms;            -- 100000
+--   SELECT COUNT(*) FROM meetings;              -- 1500000
+--   SELECT COUNT(*) FROM meeting_participants;  -- 6000000
+--   SELECT COUNT(*) FROM team_members;          -- 400000
