@@ -49,12 +49,12 @@ TRUNCATE TABLE rule_templates;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
-DROP TEMPORARY TABLE IF EXISTS tmp_numbers;
-DROP TEMPORARY TABLE IF EXISTS tmp_rooms;
-DROP TEMPORARY TABLE IF EXISTS tmp_weeks;
-DROP TEMPORARY TABLE IF EXISTS tmp_room_members;
+DROP TABLE IF EXISTS tmp_numbers;
+DROP TABLE IF EXISTS tmp_rooms;
+DROP TABLE IF EXISTS tmp_weeks;
+DROP TABLE IF EXISTS tmp_room_members;
 
-CREATE TEMPORARY TABLE tmp_numbers (
+CREATE TABLE tmp_numbers (
     n INT NOT NULL PRIMARY KEY
 );
 
@@ -69,7 +69,7 @@ WITH RECURSIVE seq AS (
 SELECT n
 FROM seq;
 
-CREATE TEMPORARY TABLE tmp_rooms (
+CREATE TABLE tmp_rooms (
     room_id INT NOT NULL PRIMARY KEY
 );
 
@@ -78,14 +78,14 @@ SELECT n
 FROM tmp_numbers
 WHERE n <= 10000;
 
-CREATE TEMPORARY TABLE tmp_weeks (
+CREATE TABLE tmp_weeks (
     week_offset INT NOT NULL PRIMARY KEY
 );
 
 INSERT INTO tmp_weeks (week_offset)
 VALUES (0), (1), (2), (3), (4), (5), (6), (7), (8), (9), (10), (11), (12), (13), (14);
 
-CREATE TEMPORARY TABLE tmp_room_members (
+CREATE TABLE tmp_room_members (
     room_id INT NOT NULL,
     slot TINYINT NOT NULL,
     user_id INT NOT NULL,
@@ -456,10 +456,10 @@ JOIN tmp_room_members rm
     ON rm.room_id = r.room_id
 ORDER BY r.room_id, w.week_offset, rm.slot;
 
-DROP TEMPORARY TABLE IF EXISTS tmp_room_members;
-DROP TEMPORARY TABLE IF EXISTS tmp_weeks;
-DROP TEMPORARY TABLE IF EXISTS tmp_rooms;
-DROP TEMPORARY TABLE IF EXISTS tmp_numbers;
+DROP TABLE IF EXISTS tmp_room_members;
+DROP TABLE IF EXISTS tmp_weeks;
+DROP TABLE IF EXISTS tmp_rooms;
+DROP TABLE IF EXISTS tmp_numbers;
 
 -- Expected quick sanity checks after the seed:
 --   SELECT COUNT(*) FROM users;                 -- 20000
