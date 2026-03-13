@@ -1,26 +1,24 @@
 -- Meeting list performance fixture
 -- Run this only after Flyway migrations have created the current schema.
 --
+-- Assumption: 10만 유저 서비스 (전체 대학생 230만의 약 4.3%)
+--
 -- Deterministic fixture values for k6:
---   TEAM_ROOM_ID=1
 --   TARGET_YEAR=2026
 --   TARGET_MONTH=3
---   FIXTURE_USER_ID=1
---   FIXTURE_EMAIL=perf-user-00001@yamoyo.test
---   FIXTURE_PROVIDER=test
---   FIXTURE_ONBOARDING_STATUS=COMPLETED
+--   Token pool: roomId 1~N, userId = (roomId * 2) - 1 (leader)
 --
 -- Seed shape:
---   users                20,000
---   team_rooms           10,000
---   team_members         40,000
---   timepicks            10,000
---   timepick_participants 40,000
---   meeting_series       10,000
---   meetings             150,000
---   meeting_participants 600,000
+--   users                  100,000
+--   team_rooms              50,000
+--   team_members           200,000
+--   timepicks               50,000
+--   timepick_participants  200,000
+--   meeting_series          50,000
+--   meetings               750,000
+--   meeting_participants 3,000,000
 
-SET SESSION cte_max_recursion_depth = 20000;
+SET SESSION cte_max_recursion_depth = 100000;
 SET FOREIGN_KEY_CHECKS = 0;
 
 TRUNCATE TABLE banned_team_members;
@@ -64,7 +62,7 @@ WITH RECURSIVE seq AS (
     UNION ALL
     SELECT n + 1
     FROM seq
-    WHERE n < 20000
+    WHERE n < 100000
 )
 SELECT n
 FROM seq;
@@ -76,7 +74,7 @@ CREATE TABLE tmp_rooms (
 INSERT INTO tmp_rooms (room_id)
 SELECT n
 FROM tmp_numbers
-WHERE n <= 10000;
+WHERE n <= 50000;
 
 CREATE TABLE tmp_weeks (
     week_offset INT NOT NULL PRIMARY KEY
@@ -101,10 +99,10 @@ UNION ALL
 SELECT room_id, 2, room_id * 2, 'MEMBER'
 FROM tmp_rooms
 UNION ALL
-SELECT room_id, 3, (IF(room_id = 10000, 1, room_id + 1) * 2) - 1, 'MEMBER'
+SELECT room_id, 3, (IF(room_id = 50000, 1, room_id + 1) * 2) - 1, 'MEMBER'
 FROM tmp_rooms
 UNION ALL
-SELECT room_id, 4, IF(room_id = 10000, 1, room_id + 1) * 2, 'MEMBER'
+SELECT room_id, 4, IF(room_id = 50000, 1, room_id + 1) * 2, 'MEMBER'
 FROM tmp_rooms;
 
 INSERT INTO terms (
@@ -167,8 +165,8 @@ INSERT INTO users (
 )
 SELECT
     n,
-    CONCAT('PerfUser', LPAD(n, 5, '0')),
-    CONCAT('perf-user-', LPAD(n, 5, '0'), '@yamoyo.test'),
+    CONCAT('PerfUser', LPAD(n, 6, '0')),
+    CONCAT('perf-user-', LPAD(n, 6, '0'), '@yamoyo.test'),
     ((n - 1) % 5) + 1,
     ELT(
         ((n - 1) % 8) + 1,
@@ -219,7 +217,7 @@ SELECT
     user_id,
     user_id,
     'test',
-    CONCAT('perf-provider-', LPAD(user_id, 5, '0')),
+    CONCAT('perf-provider-', LPAD(user_id, 6, '0')),
     email,
     '2026-01-01 00:00:00'
 FROM users;
@@ -402,7 +400,7 @@ SELECT
     ELT(((room_id - 1) % 5) + 1, 'MON', 'TUE', 'WED', 'THU', 'FRI'),
     '19:00:00',
     60,
-    CONCAT('PerfUser', LPAD((room_id * 2) - 1, 5, '0')),
+    CONCAT('PerfUser', LPAD((room_id * 2) - 1, 6, '0')),
     '2026-01-01 00:00:00',
     '2026-01-01 00:00:00'
 FROM tmp_rooms;
@@ -462,8 +460,8 @@ DROP TABLE IF EXISTS tmp_rooms;
 DROP TABLE IF EXISTS tmp_numbers;
 
 -- Expected quick sanity checks after the seed:
---   SELECT COUNT(*) FROM users;                 -- 20000
---   SELECT COUNT(*) FROM team_rooms;            -- 10000
---   SELECT COUNT(*) FROM meetings;              -- 150000
---   SELECT COUNT(*) FROM meeting_participants;  -- 600000
---   SELECT COUNT(*) FROM team_members;          -- 40000
+--   SELECT COUNT(*) FROM users;                 -- 100000
+--   SELECT COUNT(*) FROM team_rooms;            -- 50000
+--   SELECT COUNT(*) FROM meetings;              -- 750000
+--   SELECT COUNT(*) FROM meeting_participants;  -- 3000000
+--   SELECT COUNT(*) FROM team_members;          -- 200000
