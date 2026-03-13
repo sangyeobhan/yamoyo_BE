@@ -5,11 +5,12 @@ import encoding from 'k6/encoding';
 
 const selectedScenario = __ENV.SCENARIO || 'meeting_list_smoke';
 const baseUrl = requiredEnv('BASE_URL');
-const teamRoomId = requiredEnv('TEAM_ROOM_ID');
 const targetYear = Number(requiredEnv('TARGET_YEAR'));
 const targetMonth = Number(requiredEnv('TARGET_MONTH'));
 const compareRate = Number(__ENV.COMPARE_RATE || 0);
-const accessToken = resolveAccessToken();
+const poolSize = Number(__ENV.POOL_SIZE || 100);
+
+const tokenPool = buildTokenPool();
 
 const scenarioMap = {
   meeting_list_smoke: {
@@ -61,11 +62,13 @@ export const options = {
 };
 
 export function meetingListRead() {
+  const pick = tokenPool[Math.floor(Math.random() * tokenPool.length)];
+
   const response = http.get(
-    `${baseUrl}/api/team-rooms/${teamRoomId}/meetings?year=${targetYear}&month=${targetMonth}`,
+    `${baseUrl}/api/team-rooms/${pick.teamRoomId}/meetings?year=${targetYear}&month=${targetMonth}`,
     {
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${pick.token}`,
       },
       tags: { name: 'getMeetings' },
     }
@@ -93,6 +96,45 @@ export function meetingListRead() {
   });
 }
 
+function buildTokenPool() {
+  const secretBase64 = requiredEnv('JWT_SECRET_BASE64');
+  const jwtIssuer = __ENV.JWT_ISSUER || 'yamoyo-application';
+  const expirationSeconds = Number(__ENV.JWT_ACCESS_EXPIRATION_SECONDS || 3600);
+  const provider = __ENV.FIXTURE_PROVIDER || 'test';
+  const onboardingStatus = __ENV.FIXTURE_ONBOARDING_STATUS || 'COMPLETED';
+
+  const pool = [];
+  for (let roomId = 1; roomId <= poolSize; roomId++) {
+    const userId = (roomId * 2) - 1;
+    const email = `perf-user-${String(userId).padStart(5, '0')}@yamoyo.test`;
+    const token = signJwt(secretBase64, userId, email, provider, onboardingStatus, jwtIssuer, expirationSeconds);
+    pool.push({ teamRoomId: roomId, token });
+  }
+  return pool;
+}
+
+function signJwt(secretBase64, userId, email, provider, onboardingStatus, issuer, expirationSeconds) {
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const payload = {
+    sub: String(userId),
+    email,
+    provider,
+    onboardingStatus,
+    iss: issuer,
+    iat: now,
+    exp: now + expirationSeconds,
+  };
+
+  const encodedHeader = encoding.b64encode(JSON.stringify(header), 'rawurl');
+  const encodedPayload = encoding.b64encode(JSON.stringify(payload), 'rawurl');
+  const signingInput = `${encodedHeader}.${encodedPayload}`;
+  const secret = decodeBase64Secret(secretBase64);
+  const signature = crypto.hmac('sha256', secret, signingInput, 'base64rawurl');
+
+  return `${signingInput}.${signature}`;
+}
+
 function buildThresholds(scenarioName) {
   const thresholds = {
     'http_req_failed{name:getMeetings}': ['rate<0.01'],
@@ -112,44 +154,6 @@ function requiredEnv(name) {
     throw new Error(`${name} is required`);
   }
   return value;
-}
-
-function resolveAccessToken() {
-  if (__ENV.ACCESS_TOKEN) {
-    return __ENV.ACCESS_TOKEN;
-  }
-
-  const secretBase64 = requiredEnv('JWT_SECRET_BASE64');
-  const fixtureUserId = requiredEnv('FIXTURE_USER_ID');
-  const fixtureEmail = requiredEnv('FIXTURE_EMAIL');
-  const fixtureProvider = __ENV.FIXTURE_PROVIDER || 'test';
-  const fixtureOnboardingStatus = __ENV.FIXTURE_ONBOARDING_STATUS || 'COMPLETED';
-  const jwtIssuer = __ENV.JWT_ISSUER || 'yamoyo-application';
-  const expirationSeconds = Number(__ENV.JWT_ACCESS_EXPIRATION_SECONDS || 3600);
-
-  if (expirationSeconds <= 0) {
-    throw new Error('JWT_ACCESS_EXPIRATION_SECONDS must be greater than 0');
-  }
-
-  const now = Math.floor(Date.now() / 1000);
-  const header = { alg: 'HS256', typ: 'JWT' };
-  const payload = {
-    sub: String(fixtureUserId),
-    email: fixtureEmail,
-    provider: fixtureProvider,
-    onboardingStatus: fixtureOnboardingStatus,
-    iss: jwtIssuer,
-    iat: now,
-    exp: now + expirationSeconds,
-  };
-
-  const encodedHeader = encoding.b64encode(JSON.stringify(header), 'rawurl');
-  const encodedPayload = encoding.b64encode(JSON.stringify(payload), 'rawurl');
-  const signingInput = `${encodedHeader}.${encodedPayload}`;
-  const secret = decodeBase64Secret(secretBase64);
-  const signature = crypto.hmac('sha256', secret, signingInput, 'base64rawurl');
-
-  return `${signingInput}.${signature}`;
 }
 
 function decodeBase64Secret(secretBase64) {
