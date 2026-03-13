@@ -56,7 +56,7 @@ DROP TEMPORARY TABLE IF EXISTS tmp_room_members;
 
 CREATE TEMPORARY TABLE tmp_numbers (
     n INT NOT NULL PRIMARY KEY
-) ENGINE=MEMORY;
+);
 
 INSERT INTO tmp_numbers (n)
 WITH RECURSIVE seq AS (
@@ -71,7 +71,7 @@ FROM seq;
 
 CREATE TEMPORARY TABLE tmp_rooms (
     room_id INT NOT NULL PRIMARY KEY
-) ENGINE=MEMORY;
+);
 
 INSERT INTO tmp_rooms (room_id)
 SELECT n
@@ -80,7 +80,7 @@ WHERE n <= 10000;
 
 CREATE TEMPORARY TABLE tmp_weeks (
     week_offset INT NOT NULL PRIMARY KEY
-) ENGINE=MEMORY;
+);
 
 INSERT INTO tmp_weeks (week_offset)
 VALUES (0), (1), (2), (3), (4), (5), (6), (7), (8), (9), (10), (11), (12), (13), (14);
@@ -92,7 +92,7 @@ CREATE TEMPORARY TABLE tmp_room_members (
     team_role VARCHAR(10) NOT NULL,
     PRIMARY KEY (room_id, slot),
     KEY idx_tmp_room_members_user_id (user_id)
-) ENGINE=MEMORY;
+);
 
 INSERT INTO tmp_room_members (room_id, slot, user_id, team_role)
 SELECT room_id, 1, (room_id * 2) - 1, 'LEADER'

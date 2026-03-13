@@ -45,3 +45,8 @@ firebase-adminsdk.json
 ### Local HTTPS 환경 ###
 infra/local/certs/
 .env.local
+
+### AWS perf setup ###
+scripts/aws/.state/
+scripts/aws/*.env
+!scripts/aws/*.example
