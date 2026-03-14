@@ -6,7 +6,9 @@ import encoding from 'k6/encoding';
 const selectedScenario = __ENV.SCENARIO || 'meeting_list_smoke';
 const baseUrl = requiredEnv('BASE_URL');
 const targetYear = Number(requiredEnv('TARGET_YEAR'));
-const targetMonth = Number(requiredEnv('TARGET_MONTH'));
+const targetMonthPool = __ENV.TARGET_MONTH
+  ? [Number(__ENV.TARGET_MONTH)]
+  : buildMonthPool();
 const compareRate = Number(__ENV.COMPARE_RATE || 0);
 const poolSize = Number(__ENV.POOL_SIZE || 100);
 
@@ -63,6 +65,7 @@ export const options = {
 
 export function meetingListRead() {
   const pick = tokenPool[Math.floor(Math.random() * tokenPool.length)];
+  const targetMonth = targetMonthPool[Math.floor(Math.random() * targetMonthPool.length)];
 
   const response = http.get(
     `${baseUrl}/api/team-rooms/${pick.teamRoomId}/meetings?year=${targetYear}&month=${targetMonth}`,
@@ -133,6 +136,21 @@ function signJwt(secretBase64, userId, email, provider, onboardingStatus, issuer
   const signature = crypto.hmac('sha256', secret, signingInput, 'base64rawurl');
 
   return `${signingInput}.${signature}`;
+}
+
+function buildMonthPool() {
+  // weighted distribution: 1월 40%, 2월 25%, 3월 25%, 4월 10%
+  const weights = [
+    { month: 1, count: 8 },
+    { month: 2, count: 5 },
+    { month: 3, count: 5 },
+    { month: 4, count: 2 },
+  ];
+  const pool = [];
+  for (const { month, count } of weights) {
+    for (let i = 0; i < count; i++) pool.push(month);
+  }
+  return pool;
 }
 
 function buildThresholds(scenarioName) {
