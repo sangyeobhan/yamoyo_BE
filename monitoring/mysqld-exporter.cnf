@@ -1,0 +1,5 @@
+[client]
+user=exporter
+password=exporterPass2026
+host=yamoyo-perf-db.cr6gseyiqqby.ap-northeast-2.rds.amazonaws.com
+port=3306

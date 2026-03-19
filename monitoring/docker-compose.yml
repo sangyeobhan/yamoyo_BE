@@ -17,9 +17,10 @@ services:
     restart: unless-stopped
     ports:
       - "9104:9104"
-    environment:
-      DATA_SOURCE_NAME: "exporter:exporterPass2026@tcp(yamoyo-perf-db.cr6gseyiqqby.ap-northeast-2.rds.amazonaws.com:3306)/"
+    volumes:
+      - ./mysqld-exporter.cnf:/.my.cnf:ro
     command:
+      - "--config.my-cnf=/.my.cnf"
       - "--collect.info_schema.innodb_metrics"
       - "--collect.info_schema.processlist"
       - "--collect.perf_schema.tableiowaits"
