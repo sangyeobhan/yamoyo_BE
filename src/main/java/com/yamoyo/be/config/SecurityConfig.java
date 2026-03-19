@@ -79,8 +79,9 @@ public class SecurityConfig {
         // 팀룸 초대 정보 조회 (비로그인 허용)
         "/api/team-rooms/invite-info",
 
-        // 시스템 관리 (Health Check)
+        // 시스템 관리 (Health Check, Prometheus)
         "/api/actuator/health",
+        "/api/actuator/prometheus",
 
         // WebSocket 엔드포인트
         "/ws/**", "/ws-stomp/**",

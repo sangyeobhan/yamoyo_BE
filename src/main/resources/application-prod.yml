@@ -117,10 +117,16 @@ management:
     web:
       base-path: /api/actuator
       exposure:
-        include: health,info  # 운영에서는 최소한만 노출
+        include: health,info,prometheus
   endpoint:
     health:
-      show-details: when-authorized  # 인증된 사용자만 상세 정보
+      show-details: when-authorized
+    prometheus:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
 
 # SpringDoc (Swagger) - 운영에서는 비활성화
 springdoc:
